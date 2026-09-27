@@ -27,6 +27,8 @@ from cdmf_tracks import get_audio_duration, list_lora_adapters, load_track_meta,
 from cdmf_generation_job import GenerationCancelled
 import cdmf_state
 from generate_ace import register_job_progress_callback, _resolve_lm_checkpoint_path
+from iplay_license import (load_installed_license, trial_used, mark_trial_used,
+                            tag_trial_preview, TRIAL_DURATION_S)
 
 bp = Blueprint("api_generate", __name__)
 
@@ -138,6 +140,7 @@ def _run_generation(job_id: str) -> None:
         params = job.get("params") or {}
         if not isinstance(params, dict):
             params = {}
+        is_trial = bool(job.get("is_trial"))
         # Map to ACE-Step params: task_type, reference_audio, src_audio, audio_cover_strength (Tutorial/INFERENCE.md)
         custom_mode = bool(params.get("customMode", False))
         task = (params.get("task_type") or params.get("taskType") or "text2music").strip().lower()
@@ -260,6 +263,8 @@ def _run_generation(job_id: str) -> None:
         if duration <= 0:
             duration = 60
         duration = max(15, min(240, duration))
+        if is_trial:
+            duration = min(duration, TRIAL_DURATION_S)
 
         # When reference/source audio is provided, enable Audio2Audio so ACE-Step uses it (cover/retake/repaint/lego).
         # Defaults aligned with ACE-Step-MCP (ref_audio_strength 0.5) and cover/retake UX (strong source → 0.8).
@@ -406,6 +411,10 @@ def _run_generation(job_id: str) -> None:
         audio_url = f"/audio/{filename}"
         actual_seconds = float(summary.get("actual_seconds") or (duration if duration > 0 else 0))
 
+        if is_trial:
+            tag_trial_preview(path)
+            mark_trial_used()
+
         # Save title, lyrics, style to track metadata so they appear in the library (input params only; model does not return lyrics)
         try:
             meta = load_track_meta()
@@ -441,6 +450,7 @@ def _run_generation(job_id: str) -> None:
                     "keyScale": params.get("keyScale"),
                     "timeSignature": params.get("timeSignature"),
                     "status": "succeeded",
+                    "trial": is_trial,
                 }
     except GenerationCancelled:
         logging.info("Generation job %s cancelled by user", job_id)
@@ -501,6 +511,24 @@ def create_job():
         task_for_validation = _str(task_raw).lower() if task_raw else "text2music"
         base_only_tasks = ("lego", "extract", "complete")
         audio_tasks = ("cover", "retake", "audio2audio", "repaint", "extend")
+
+        # ── license / free-trial gate ────────────────────────────────────────
+        # No license: one free preview per install, plain text2music only (no
+        # cover/retake/repaint/extend/lego/extract/complete — those are "edit"
+        # operations, out of scope for "play that little piece"), watermarked,
+        # capped short. See iplay_license.py.
+        lic_ok, _lic_reason, _lic_payload = load_installed_license()
+        is_trial = False
+        if not lic_ok:
+            if trial_used():
+                return jsonify({"error": "trial_used",
+                                 "message": "Free preview already used on this install — "
+                                            "subscribe or buy the rig for unlimited songs."}), 402
+            if task_for_validation != "text2music":
+                return jsonify({"error": "trial_scope",
+                                 "message": f"Free preview only supports a simple song — "
+                                            f"'{task_for_validation}' needs a license."}), 402
+            is_trial = True
 
         # Only require songDescription for true "simple" mode: no customMode, no task context, no source/ref/style/prompt
         has_src = bool(_str(data.get("src_audio") or data.get("sourceAudioUrl") or data.get("source_audio_path")))
@@ -569,6 +597,7 @@ def create_job():
                 "progressStage": None,
                 "dit_model": dit_tag,
                 "lm_model": lm_tag,
+                "is_trial": is_trial,
             }
             _job_order.append(job_id)
             pos = _jobs[job_id]["queuePosition"]
@@ -737,6 +766,37 @@ def get_endpoints():
 def get_health():
     """GET /api/generate/health."""
     return jsonify({"healthy": True})
+
+
+@bp.route("/license", methods=["GET"])
+def get_license_status():
+    """GET /api/generate/license — license + free-trial state for the UI's
+    gate/banner (mirrors the Windows plugin's /health fields)."""
+    lic_ok, lic_reason, payload = load_installed_license()
+    return jsonify({
+        "license_ok": lic_ok,
+        "license_reason": lic_reason,
+        "license_email": payload.get("email"),
+        "license_plan": payload.get("plan"),
+        "license_expires": payload.get("expires"),
+        "trial_available": not trial_used(),
+    })
+
+
+@bp.route("/license/activate", methods=["POST"])
+def activate_license():
+    """POST /api/generate/license/activate {license} — same contract as the
+    Windows plugin's /activate."""
+    from iplay_license import install_license
+    data = request.get_json(silent=True) or {}
+    key = (data.get("license") or "").strip()
+    if not key:
+        return jsonify({"error": "license key required"}), 400
+    ok, reason, payload = install_license(key)
+    if not ok:
+        return jsonify({"error": reason}), 400
+    return jsonify({"ok": True, "email": payload.get("email"),
+                    "plan": payload.get("plan"), "expires": payload.get("expires")})
 
 
 @bp.route("/debug/<task_id>", methods=["GET"])
