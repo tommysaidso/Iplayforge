@@ -57,7 +57,42 @@
                 amber: '#ffb11f',
                 green: '#38f2b2',
                 edge: 'rgba(39,230,223,0.25)',
-              }
+              },
+              // Suno's brand accents were Tailwind's stock pink/purple/blue,
+              // used directly as literal utility classes (text-pink-500,
+              // from-pink-400, bg-purple-500/20, etc.) across the component
+              // tree. Overriding these three global scales — instead of
+              // hunting every literal class in every component file — remaps
+              // every one of those call sites to iplay's palette at once:
+              // pink -> cyan, purple -> amber, blue -> green (the same three
+              // hues already used in .gradient-text above).
+              pink: {
+                50: '#f0fdfd', 100: '#dffbfa', 200: '#baf7f5', 300: '#8ff2ee',
+                400: '#57ece6', 500: '#27e6df', 600: '#22c6c0', 700: '#1ba19c',
+                800: '#157c78', 900: '#105c59', 950: '#0a3a38',
+              },
+              purple: {
+                50: '#fffaef', 100: '#fff3dd', 200: '#ffe6b7', 300: '#ffd68b',
+                400: '#ffc250', 500: '#ffb11f', 600: '#db981b', 700: '#b27c16',
+                800: '#8a6011', 900: '#66470c', 950: '#402c08',
+              },
+              blue: {
+                50: '#f1fefa', 100: '#e1fdf3', 200: '#bffbe6', 300: '#98f8d7',
+                400: '#64f5c3', 500: '#38f2b2', 600: '#30d099', 700: '#27a97d',
+                800: '#1e8360', 900: '#166147', 950: '#0e3c2c',
+              },
+            },
+            borderRadius: {
+              // iplay's FOUR-SURFACES system is squared-panel, not rounded
+              // SaaS cards (--radius-panel: 6px). Components use rounded-lg/
+              // xl/2xl/3xl directly rather than through a shared token, so
+              // capping those four sizes here re-squares every panel/card/
+              // button/modal at once. rounded-full is left alone (avatars,
+              // pills, icon buttons — round by function, not a "panel").
+              lg: '6px',
+              xl: '6px',
+              '2xl': '6px',
+              '3xl': '6px',
             },
             fontFamily: {
               sans: ['Archivo', 'Helvetica Neue', 'Arial', 'sans-serif'],
