@@ -12,7 +12,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { ConsolePanel } from './components/ConsolePanel';
 import { SongProfile } from './components/SongProfile';
 import { Song, GenerationParams, View, Playlist } from './types';
-import { generateApi, songsApi, playlistsApi, getAudioUrl, preferencesApi } from './services/api';
+import { generateApi, songsApi, playlistsApi, getAudioUrl, preferencesApi, licenseApi, LicenseStatus } from './services/api';
+import { TrialBanner, LicenseGateModal } from './components/LicenseGate';
 import { useAuth } from './context/AuthContext';
 import { useResponsive } from './context/ResponsiveContext';
 import { List } from 'lucide-react';
@@ -105,6 +106,18 @@ export default function App() {
 
   // Mobile Details Modal State
   const [showMobileDetails, setShowMobileDetails] = useState(false);
+
+  // License / free-trial gate state
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus | null>(null);
+  const [showLicenseGate, setShowLicenseGate] = useState(false);
+
+  const refreshLicenseStatus = useCallback(() => {
+    licenseApi.status().then(setLicenseStatus).catch((e) => console.warn('[License] status check failed', e));
+  }, []);
+
+  useEffect(() => {
+    refreshLicenseStatus();
+  }, [refreshLicenseStatus]);
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: ToastType; isVisible: boolean }>({
@@ -702,6 +715,11 @@ export default function App() {
             cleanupJob(job.jobId, tempId);
             await refreshSongsList();
 
+            if (status.result.trial) {
+              refreshLicenseStatus();
+              showToast('Free preview used — subscribe or buy the rig for unlimited, unwatermarked songs.', 'info');
+            }
+
             if (window.innerWidth < 768) {
               setMobileShowList(true);
             }
@@ -736,7 +754,15 @@ export default function App() {
       if (activeJobsRef.current.size === 0) {
         setIsGenerating(false);
       }
-      const msg = e instanceof Error ? e.message : 'Generation failed. Please try again.';
+      const status = (e as { status?: number })?.status;
+      const reason = (e as { reason?: string })?.reason;
+      // Strip the "402: " status prefix api() adds — the backend's `error`
+      // text for these two reasons is already a complete, friendly sentence.
+      const msg = e instanceof Error ? e.message.replace(/^\d+:\s*/, '') : 'Generation failed. Please try again.';
+      if (status === 402 && (reason === 'trial_used' || reason === 'trial_scope')) {
+        refreshLicenseStatus();
+        setShowLicenseGate(true);
+      }
       showToast(msg, 'error');
     }
   };
@@ -1171,6 +1197,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-suno-DEFAULT text-zinc-900 dark:text-white font-sans antialiased selection:bg-pink-500/30 transition-colors duration-300">
+      <TrialBanner licenseStatus={licenseStatus} onActivateClick={() => setShowLicenseGate(true)} />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           currentView={currentView}
@@ -1265,6 +1292,16 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onNavigateToProfile={handleNavigateToProfile}
+      />
+      <LicenseGateModal
+        isOpen={showLicenseGate}
+        onClose={() => setShowLicenseGate(false)}
+        licenseStatus={licenseStatus}
+        onActivated={(status) => {
+          setLicenseStatus(status);
+          setShowLicenseGate(false);
+          showToast(`Activated — ${status.license_plan || 'licensed'} plan`, 'success');
+        }}
       />
 
       {/* Mobile Details Modal */}
