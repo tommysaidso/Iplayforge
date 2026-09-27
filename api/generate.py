@@ -525,17 +525,21 @@ def create_job():
         # cover/retake/repaint/extend/lego/extract/complete — those are "edit"
         # operations, out of scope for "play that little piece"), watermarked,
         # capped short. See iplay_license.py.
+        # NOTE: `error` here is the human-readable message — matches every
+        # other 400 in this route (the frontend's shared api() helper reads
+        # error.error as the display text). `reason` is a stable machine
+        # code for the UI's license gate to branch on without parsing text.
         lic_ok, _lic_reason, _lic_payload = load_installed_license()
         is_trial = False
         if not lic_ok:
             if trial_used():
-                return jsonify({"error": "trial_used",
-                                 "message": "Free preview already used on this install — "
-                                            "subscribe or buy the rig for unlimited songs."}), 402
+                return jsonify({"error": "Free preview already used on this install — "
+                                          "subscribe or buy the rig for unlimited songs.",
+                                 "reason": "trial_used"}), 402
             if task_for_validation != "text2music":
-                return jsonify({"error": "trial_scope",
-                                 "message": f"Free preview only supports a simple song — "
-                                            f"'{task_for_validation}' needs a license."}), 402
+                return jsonify({"error": f"Free preview only supports a simple song — "
+                                          f"'{task_for_validation}' needs a license.",
+                                 "reason": "trial_scope"}), 402
             is_trial = True
 
         # Only require songDescription for true "simple" mode: no customMode, no task context, no source/ref/style/prompt
