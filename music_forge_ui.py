@@ -394,6 +394,7 @@ try:
         search_bp,
         preferences_bp,
         ace_step_models_bp,
+        voices_bp,
     )
     from api.generate import reset_generation_queue
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -407,6 +408,7 @@ try:
     app.register_blueprint(search_bp, url_prefix="/api/search")
     app.register_blueprint(preferences_bp, url_prefix="/api/preferences")
     app.register_blueprint(ace_step_models_bp, url_prefix="/api/ace-step")
+    app.register_blueprint(voices_bp, url_prefix="/api/voices")
 except ImportError as e:
     print(f"[AceForge] New UI API not available: {e}", flush=True)
 

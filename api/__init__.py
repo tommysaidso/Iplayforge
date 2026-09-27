@@ -12,6 +12,7 @@ from api.reference_tracks import bp as reference_tracks_bp
 from api.search import bp as search_bp
 from api.preferences import bp as preferences_bp
 from api.ace_step_models import bp as ace_step_models_bp
+from api.voices import bp as voices_bp
 
 __all__ = [
     "auth_bp",
@@ -24,4 +25,5 @@ __all__ = [
     "search_bp",
     "preferences_bp",
     "ace_step_models_bp",
+    "voices_bp",
 ]
