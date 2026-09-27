@@ -46,7 +46,10 @@ async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
     const errorMessage = error.error || error.message || 'Request failed';
     const msg = `${response.status}: ${errorMessage}`;
     console.error(`[API] ${method} ${url} failed:`, msg, error);
-    throw new Error(msg);
+    // status/reason are additive (existing `e.message` callers everywhere
+    // else in this file are unaffected) — lets callers that care (the
+    // license/trial gate) branch without re-parsing the message string.
+    throw Object.assign(new Error(msg), { status: response.status, reason: error.reason as string | undefined });
   }
 
   return response.json();
@@ -334,6 +337,8 @@ export interface GenerationJob {
     duration?: number;
     keyScale?: string;
     timeSignature?: string;
+    /** true when this was a free preview (no license) — capped, watermarked. */
+    trial?: boolean;
   };
   error?: string;
 }
@@ -404,6 +409,25 @@ export const generateApi = {
     status_message?: string;
     error?: string;
   }> => api('/api/generate/format', { method: 'POST', body: params, token: token || undefined }),
+};
+
+// License / free-trial gate (see iplay_license.py) — no license installed:
+// one free, watermarked, plain text2music song per install, then a 402.
+export interface LicenseStatus {
+  license_ok: boolean;
+  license_reason: string;
+  license_email?: string | null;
+  license_plan?: string | null;
+  license_expires?: number | null;
+  trial_available: boolean;
+}
+
+export const licenseApi = {
+  status: (): Promise<LicenseStatus> =>
+    api('/api/generate/license'),
+
+  activate: (license: string): Promise<{ ok: boolean; email?: string; plan?: string; expires?: number }> =>
+    api('/api/generate/license/activate', { method: 'POST', body: { license } }),
 };
 
 // Users API
