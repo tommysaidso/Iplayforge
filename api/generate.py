@@ -197,6 +197,14 @@ def _run_generation(job_id: str) -> None:
         except (TypeError, ValueError):
             steps = 65
         steps = max(1, min(100, steps))
+        if is_trial:
+            # Live-tested 2026-09-27 on the 16GB M1 iMac: the 65-step default
+            # took several minutes just past model load before finishing a
+            # single trial render — a bad first impression for "try it free."
+            # 8 steps matches ACE-Step turbo's own fast preset (same count
+            # used elsewhere in this estate for quick previews) and keeps
+            # the free preview actually quick.
+            steps = min(steps, 8)
         try:
             guidance_scale = float(params.get("guidanceScale") or 4.0)
         except (TypeError, ValueError):
