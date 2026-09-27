@@ -3,23 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AceForge</title>
+    <title>iplayForge</title>
 
     <!-- Primary Meta Tags -->
-    <meta name="title" content="AceForge" />
-    <meta name="description" content="Create and produce AI music locally with AceForge. Free and open source AI music workstation powered by ACE-Step 1.5." />
-    <meta name="keywords" content="AI music workstation, AceForge, ACE-Step, local AI, music production, text to music, AI music" />
+    <meta name="title" content="iplayForge" />
+    <meta name="description" content="iplay's local AI song rig for Apple Silicon — build, edit, and produce real songs on your own GPU, powered by ACE-Step 1.5." />
+    <meta name="keywords" content="AI music workstation, iplay, iplayForge, ACE-Step, local AI, music production, text to music, AI music" />
     <meta name="robots" content="index, follow" />
-    <meta name="author" content="AceForge" />
+    <meta name="author" content="iplay.studio" />
 
     <!-- Additional SEO -->
-    <meta name="theme-color" content="#ec4899" />
-    <meta name="application-name" content="AceForge" />
-    <meta name="apple-mobile-web-app-title" content="AceForge" />
+    <meta name="theme-color" content="#27e6df" />
+    <meta name="application-name" content="iplayForge" />
+    <meta name="apple-mobile-web-app-title" content="iplayForge" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
+    <!--
+      iplay FOUR-SURFACES design tokens (see memory: iplay-four-surfaces-design-system).
+      Ben, 2026-09-27: "get rid of the ugly an we want ours" — this app shipped with
+      AceForge's stock branding and a color palette literally named `suno` (Suno's own
+      near-black + pink/purple). Re-skinned via the SAME pattern used for SongLab and
+      mymymy before: swap the token VALUES under the existing key names (suno.DEFAULT/
+      panel/card/hover/border, gradient-text) so every component that already references
+      them (bg-suno-DEFAULT, bg-suno-panel, etc. — dozens of call sites across App.tsx and
+      the components/ tree) re-skins at once, without a full per-component rewrite. New
+      `iplay.*` keys are ADDED alongside for accent usage going forward.
+      NOT done in this pass: corner radius (components use rounded-lg/2xl directly, not a
+      token — iplay wants squared 6px panels; that needs per-component work later) and any
+      literal pink-500/purple-400/blue-400 Tailwind utility class still hardcoded in a
+      component file (a full sweep of every component wasn't done — grep for "pink-" or
+      "purple-" across ui/components/ to find remaining spots).
+    -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -28,16 +44,25 @@
           extend: {
             colors: {
               suno: {
-                DEFAULT: '#09090b',
-                sidebar: '#000000',
-                panel: '#121214',
-                card: '#18181b',
-                hover: '#27272a',
-                border: '#27272a',
+                DEFAULT: '#05090d',
+                sidebar: '#05090d',
+                panel: '#0a1117',
+                card: '#111820',
+                hover: '#182129',
+                border: 'rgba(150,175,190,0.22)',
+              },
+              iplay: {
+                cyan: '#27e6df',
+                red: '#ff5147',
+                amber: '#ffb11f',
+                green: '#38f2b2',
+                edge: 'rgba(39,230,223,0.25)',
               }
             },
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['Archivo', 'Helvetica Neue', 'Arial', 'sans-serif'],
+              display: ['Bricolage Grotesque', 'Arial Narrow', 'sans-serif'],
+              mono: ['Space Mono', 'Courier New', 'monospace'],
             },
             animation: {
               'gradient-x': 'gradient-x 15s ease infinite',
@@ -59,14 +84,14 @@
       }
     </script>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700&family=Space+Mono:wght@400;700&display=swap');
 
       :root {
         --breakpoint-mobile: 768px;
       }
 
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
       }
 
       ::-webkit-scrollbar {
@@ -102,7 +127,7 @@
       }
 
       .gradient-text {
-        background: linear-gradient(to right, #f472b6, #a78bfa, #60a5fa);
+        background: linear-gradient(to right, #27e6df, #38f2b2, #ffb11f);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
