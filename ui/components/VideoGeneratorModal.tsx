@@ -152,8 +152,8 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
   // Config State
   const [config, setConfig] = useState<VisualizerConfig>({
     preset: 'NCS Circle',
-    primaryColor: '#ec4899', // Pink-500
-    secondaryColor: '#3b82f6', // Blue-500
+    primaryColor: '#27e6df', // iplay cyan
+    secondaryColor: '#ffb11f', // iplay amber
     bgDim: 0.6,
     particleCount: 50
   });
